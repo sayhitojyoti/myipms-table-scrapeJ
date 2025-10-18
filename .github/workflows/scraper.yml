@@ -81,17 +81,19 @@ jobs:
           mkdir -p data
           echo "$SESSION_DATA" | base64 --decode > session_cookies.json
         
-      # ✅ FIXED: Use zero-padded chunk number (e.g., 0001, 0002)
+      # ✅ Zero-padded chunk number
       - name: Run scraping for chunk ${{ matrix.chunk_num }}
         run: |
           padded_num=$(printf "%04d" ${{ matrix.chunk_num }})
           echo "🧩 Running worker for chunk_${padded_num}.txt"
           node worker_script.js $padded_num
       
+      # ✅ Safe push with rebase to avoid fast-forward errors
       - name: Upload scraped data
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add data/
           git commit -m "Add scraped data from chunk ${{ matrix.chunk_num }}" || echo "No changes to commit"
+          git pull --rebase origin main
           git push
