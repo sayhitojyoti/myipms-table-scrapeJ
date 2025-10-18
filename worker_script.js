@@ -101,7 +101,7 @@ async function scrapePage(page, url) {
   try {
     await page.goto(url, { 
       waitUntil: 'networkidle2', 
-      timeout: 60000 
+      timeout: 120000 
     });
     
     // Check for CAPTCHA or verification page
