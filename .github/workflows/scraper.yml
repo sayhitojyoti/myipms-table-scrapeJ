@@ -51,7 +51,6 @@ jobs:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
       max-parallel: ${{ fromJson(inputs.parallel_jobs) }}
 
-    # 👇 Make SESSION_DATA secret available to all steps
     env:
       SESSION_DATA: ${{ secrets.SESSION_DATA }}
 
@@ -68,7 +67,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # ✅ Optional debug (safe — prints only length)
       - name: Check SESSION_DATA secret length
         run: echo "SESSION_DATA length: $(echo "$SESSION_DATA" | wc -c)"
 
