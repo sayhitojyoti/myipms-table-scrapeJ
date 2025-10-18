@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
-      max-parallel: ${{ inputs.parallel_jobs }}
+      max-parallel: ${{ fromJson(inputs.parallel_jobs) }}
     
     steps:
     - name: Checkout repository
