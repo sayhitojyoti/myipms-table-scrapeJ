@@ -69,7 +69,6 @@ jobs:
 
       - name: Check SESSION_DATA secret length
         run: |
-          # use a block scalar to avoid YAML quoting issues
           echo "SESSION_DATA length: $(echo \"$SESSION_DATA\" | wc -c)"
 
       - name: Decode session cookies
@@ -77,8 +76,12 @@ jobs:
           mkdir -p data
           echo "$SESSION_DATA" | base64 --decode > session_cookies.json
         
+      # ✅ FIXED: Use zero-padded chunk number (e.g., 0001, 0002)
       - name: Run scraping for chunk ${{ matrix.chunk_num }}
-        run: node worker_script.js ${{ matrix.chunk_num }}
+        run: |
+          padded_num=$(printf "%04d" ${{ matrix.chunk_num }})
+          echo "🧩 Running worker for chunk_${padded_num}.txt"
+          node worker_script.js $padded_num
       
       - name: Upload scraped data
         run: |
