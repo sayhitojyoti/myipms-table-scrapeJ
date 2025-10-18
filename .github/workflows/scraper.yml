@@ -50,32 +50,40 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
       max-parallel: ${{ fromJson(inputs.parallel_jobs) }}
-    
+
+    # 👇 Make SESSION_DATA secret available to all steps
+    env:
+      SESSION_DATA: ${{ secrets.SESSION_DATA }}
+
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
       
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '18'
-        cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
         
-    - name: Install dependencies
-      run: npm install
-      
-    - name: Decode session cookies
-      run: |
-        mkdir -p data
-        echo "${{ secrets.SESSION_DATA }}" | base64 --decode > session_cookies.json
+      - name: Install dependencies
+        run: npm install
+
+      # ✅ Optional debug (safe — prints only length)
+      - name: Check SESSION_DATA secret length
+        run: echo "SESSION_DATA length: $(echo "$SESSION_DATA" | wc -c)"
+
+      - name: Decode session cookies
+        run: |
+          mkdir -p data
+          echo "$SESSION_DATA" | base64 --decode > session_cookies.json
         
-    - name: Run scraping for chunk ${{ matrix.chunk_num }}
-      run: node worker_script.js ${{ matrix.chunk_num }}
+      - name: Run scraping for chunk ${{ matrix.chunk_num }}
+        run: node worker_script.js ${{ matrix.chunk_num }}
       
-    - name: Upload scraped data
-      run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add data/
-        git commit -m "Add scraped data from chunk ${{ matrix.chunk_num }}" || echo "No changes to commit"
-        git push
+      - name: Upload scraped data
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add data/
+          git commit -m "Add scraped data from chunk ${{ matrix.chunk_num }}" || echo "No changes to commit"
+          git push
