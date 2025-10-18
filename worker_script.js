@@ -173,7 +173,7 @@ async function scrapePage(page, url) {
 
     await page.goto(url, {
       waitUntil: "domcontentloaded", // More reliable than networkidle2
-      timeout: 120000,
+      timeout: 500000,
     });
 
     // Simulate human-like behavior
