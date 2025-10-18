@@ -24,12 +24,31 @@ on:
         type: string
 
 jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        run: |
+          start=${{ inputs.chunk_start }}
+          end=${{ inputs.chunk_end }}
+          matrix="{\"chunk_num\":["
+          for ((i=start; i<=end; i++)); do
+            if [ $i -eq $start ]; then
+              matrix+="$i"
+            else
+              matrix+=",$i"
+            fi
+          done
+          matrix+="]}"
+          echo "matrix=$matrix" >> $GITHUB_OUTPUT
+          
   scrape-chunks:
+    needs: prepare
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        chunk_num: 
-          ${{ fromJson(format('[{0}]', join(range(inputs.chunk_start, inputs.chunk_end), ','))) }}
+      matrix: ${{ fromJson(needs.prepare.outputs.matrix) }}
       max-parallel: ${{ inputs.parallel_jobs }}
     
     steps:
