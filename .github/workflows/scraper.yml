@@ -1,0 +1,125 @@
+name: Distributed Web Scraping
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_parallel_jobs:
+        description: 'Maximum number of parallel jobs to run'
+        required: true
+        default: '10'
+        type: 'choice'
+        options:
+          - '5'
+          - '10'
+          - '15'
+      chunk_start:
+        description: 'Starting chunk number (inclusive)'
+        required: true
+        default: 1
+        type: 'number'
+      chunk_end:
+        description: 'Ending chunk number (inclusive)'
+        required: true
+        default: 10
+        type: 'number'
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Generate matrix
+        id: set-matrix
+        run: |
+          start=${{ github.event.inputs.chunk_start }}
+          end=${{ github.event.inputs.chunk_end }}
+          
+          # Generate array of chunk numbers
+          chunks=()
+          for ((i=start; i<=end; i++))
+          do
+            chunk_id=$(printf "chunk_%04d" $i)
+            chunks+=("$chunk_id")
+          done
+          
+          # Convert to JSON array
+          json_array=$(printf '%s\n' "${chunks[@]}" | jq -R . | jq -s .)
+          echo "matrix={\"chunk\":$json_array}" >> $GITHUB_OUTPUT
+
+  scrape:
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{fromJson(needs.prepare.outputs.matrix)}}
+      max-parallel: ${{ github.event.inputs.max_parallel_jobs }}
+      fail-fast: false
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: Install dependencies
+        run: |
+          npm init -y
+          npm install puppeteer csv-writer
+
+      - name: Check if chunk file exists
+        id: check-chunk
+        run: |
+          if [ -f "chunks/${{ matrix.chunk }}.txt" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Run scraper for chunk
+        if: steps.check-chunk.outputs.exists == 'true'
+        env:
+          SESSION_DATA: ${{ secrets.SESSION_DATA }}
+        run: |
+          node worker_script.js "chunks/${{ matrix.chunk }}.txt"
+
+      - name: Commit results
+        if: steps.check-chunk.outputs.exists == 'true'
+        run: |
+          git config --global user.name 'GitHub Actions Bot'
+          git config --global user.email 'actions@github.com'
+          
+          # Add any new CSV files
+          git add data/*.csv
+          
+          # Check if there are changes to commit
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Add scraped data for ${{ matrix.chunk }}"
+            git pull --rebase
+            git push
+          fi
+
+  notify:
+    needs: scrape
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        
+      - name: Job status
+        run: |
+          echo "Scraping job completed with status: ${{ job.status }}"
+          echo "Check the data/ directory for scraped results"

@@ -1,0 +1,27 @@
+{
+  "name": "myipms-distributed-scraper",
+  "version": "1.0.0",
+  "description": "Distributed web scraping system for MyIP.ms using GitHub Actions",
+  "main": "local_scraper.js",
+  "scripts": {
+    "scrape-local": "node local_scraper.js",
+    "generate-urls": "node url_generator.js",
+    "consolidate": "node consolidate_data.js"
+  },
+  "keywords": [
+    "web-scraping",
+    "distributed",
+    "github-actions",
+    "puppeteer"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "csv-writer": "^1.6.0",
+    "puppeteer": "^19.7.0"
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  }
+}
