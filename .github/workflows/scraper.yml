@@ -68,7 +68,9 @@ jobs:
         run: npm install
 
       - name: Check SESSION_DATA secret length
-        run: echo "SESSION_DATA length: $(echo "$SESSION_DATA" | wc -c)"
+        run: |
+          # use a block scalar to avoid YAML quoting issues
+          echo "SESSION_DATA length: $(echo \"$SESSION_DATA\" | wc -c)"
 
       - name: Decode session cookies
         run: |
